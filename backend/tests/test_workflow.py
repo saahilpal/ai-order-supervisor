@@ -106,7 +106,7 @@ async def test_order_supervisor_workflow():
 
 
 def test_provider_uses_repo_dotenv_model(monkeypatch):
-    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.setenv("LLM_MODEL", "llama3.1:8b")
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
 
     provider = get_llm_provider()

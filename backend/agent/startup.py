@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 
 from agent.errors import (
     LLMAuthenticationError,
@@ -23,6 +25,9 @@ from agent.errors import (
 )
 
 logger = logging.getLogger("order_supervisor.startup")
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 
 # Providers that have no useful ping endpoint (require SDK calls)
 _SKIP_PING_PROVIDERS = {"bedrock", "cohere"}
@@ -226,7 +231,7 @@ async def verify_provider() -> None:
     # ── Ollama: full 3-step verification ──────────────────────────────────────
     if name == "ollama":
         ollama_url = base_url or os.getenv("LLM_BASE_URL", "http://localhost:11434")
-        ollama_model = model or os.getenv("LLM_MODEL", "llama3.1:8b")
+        ollama_model = model or os.getenv("LLM_MODEL", "gemma4:latest")
         await _verify_ollama(ollama_url, ollama_model)
         logger.info(f"Ollama OK — model '{ollama_model}' is ready.")
         return

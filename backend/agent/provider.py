@@ -60,9 +60,10 @@ from agent.errors import (
 logger = logging.getLogger("order_supervisor.llm")
 
 # Load environment variables from the repository root and backend root so the
-# provider can resolve LLM settings regardless of the import path.
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+# provider can resolve LLM settings regardless of the import path. We use
+# override=True so the checked-in repo .env values win over stale shell values.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 
 
 # ── Abstract base ─────────────────────────────────────────────────────────────
@@ -529,6 +530,9 @@ def get_llm_provider() -> LLMProvider:
         LLM_BASE_URL   — override base URL for OpenAI-compatible providers
         LLM_TIMEOUT    — request timeout in seconds (default 60)
     """
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
+
     name = os.getenv("LLM_PROVIDER", "ollama").lower().strip()
     model = os.getenv("LLM_MODEL") or None
     base_url_override = os.getenv("LLM_BASE_URL") or None
@@ -584,7 +588,7 @@ def get_llm_provider() -> LLMProvider:
 
         # Ollama: default model if not set
         if name == "ollama" and not model:
-            model = os.getenv("LLM_MODEL", "gemma4:latest")
+            model = "gemma4:latest"
 
         extra_headers: Optional[Dict[str, str]] = None
         if name == "openrouter":
