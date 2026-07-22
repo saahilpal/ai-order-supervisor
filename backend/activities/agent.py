@@ -83,7 +83,10 @@ async def run_classifier(
                 non_retryable=True,
             ) from exc
         # Fail open: wake the agent so events are not silently dropped
-        return AgentWakeUpDecision(should_wake=True)
+        return AgentWakeUpDecision(
+            should_wake=True,
+            reason="Classifier failed; defaulting to wake the agent so no event is dropped.",
+        )
 
 
 @activity.defn

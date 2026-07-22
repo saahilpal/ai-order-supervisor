@@ -1,9 +1,14 @@
+from unittest.mock import patch
+
 import pytest
 from temporalio import activity
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
+from activities.agent import run_classifier
+from agent.errors import LLMModelNotFoundError
+from agent.provider import get_llm_provider
 from schemas.workflow import WorkflowInput, AgentOutput, AgentWakeUpDecision, EventSignal
 from temporal.workflow import OrderSupervisorWorkflow
 
@@ -98,3 +103,28 @@ async def test_order_supervisor_workflow():
             
             assert "Workflow completed" in result
             assert "Delivered successfully" in result
+
+
+def test_provider_uses_repo_dotenv_model(monkeypatch):
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+    provider = get_llm_provider()
+
+    assert provider.model_name == "gemma4:latest"
+
+
+@pytest.mark.asyncio
+async def test_classifier_fallback_returns_reason(monkeypatch):
+    async def raise_error(*args, **kwargs):
+        raise LLMModelNotFoundError(
+            "model not found",
+            user_message="model missing",
+        )
+
+    monkeypatch.setattr("activities.agent.run_classifier_logic", raise_error)
+
+    decision = await run_classifier("memory", "guidance", [])
+
+    assert decision.should_wake is True
+    assert decision.reason

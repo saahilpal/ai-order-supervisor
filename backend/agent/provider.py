@@ -40,7 +40,10 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Dict, Optional
+
+from dotenv import load_dotenv
 
 from agent.errors import (
     LLMAuthenticationError,
@@ -55,6 +58,11 @@ from agent.errors import (
 )
 
 logger = logging.getLogger("order_supervisor.llm")
+
+# Load environment variables from the repository root and backend root so the
+# provider can resolve LLM settings regardless of the import path.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
 # ── Abstract base ─────────────────────────────────────────────────────────────
@@ -576,7 +584,7 @@ def get_llm_provider() -> LLMProvider:
 
         # Ollama: default model if not set
         if name == "ollama" and not model:
-            model = os.getenv("LLM_MODEL", "llama3.1:8b")
+            model = os.getenv("LLM_MODEL", "gemma4:latest")
 
         extra_headers: Optional[Dict[str, str]] = None
         if name == "openrouter":
