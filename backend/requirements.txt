@@ -1,0 +1,25 @@
+# Core backend dependencies
+fastapi
+uvicorn[standard]
+temporalio
+sqlalchemy
+alembic
+aiosqlite
+pydantic
+pydantic-settings
+python-dotenv
+pytest
+pytest-asyncio
+asyncpg
+psycopg2-binary
+greenlet
+httpx
+
+# Default LLM provider path: Ollama via OpenAI-compatible API
+openai
+
+# ── Optional LLM providers (install only what you use) ──────────────────────
+# google-genai        # Google Gemini
+# anthropic           # Anthropic Claude
+# boto3               # AWS Bedrock
+# cohere              # Cohere Command
