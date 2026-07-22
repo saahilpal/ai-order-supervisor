@@ -17,6 +17,19 @@ CONTINUE_AS_NEW_EVERY = 100
 TERMINAL_EVENT_TYPES = {"delivered", "cancelled", "order_cancelled"}
 
 
+def get_workflow_state_for_update(
+    *,
+    is_paused: bool,
+    manual_termination_requested: bool,
+    default_sleep_state: str,
+) -> tuple[str, str]:
+    if is_paused:
+        return "paused", "paused"
+    if manual_termination_requested:
+        return "terminating", "terminated"
+    return "running", default_sleep_state
+
+
 @workflow.defn
 class OrderSupervisorWorkflow:
     def __init__(self) -> None:
@@ -71,9 +84,14 @@ class OrderSupervisorWorkflow:
         self.iteration_count = input_data.iteration_count
 
         if self.iteration_count == 0:
+            status, sleep_state = get_workflow_state_for_update(
+                is_paused=False,
+                manual_termination_requested=False,
+                default_sleep_state="awake",
+            )
             await workflow.execute_activity(
                 update_run_state,
-                args=[self.run_id, "running", self.memory_summary, "awake", None],
+                args=[self.run_id, status, self.memory_summary, sleep_state, None],
                 start_to_close_timeout=timedelta(seconds=10),
                 retry_policy=RetryPolicy(maximum_attempts=3),
             )
@@ -182,19 +200,25 @@ class OrderSupervisorWorkflow:
                         "Agent recommended closure; workflow remains open until a terminal event or manual termination."
                     )
 
-                next_wake_at = workflow.now() + sleep_duration
-                await workflow.execute_activity(
-                    update_run_state,
-                    args=[
-                        self.run_id,
-                        "running",
-                        self.memory_summary,
-                        "sleeping",
-                        next_wake_at.isoformat(),
-                    ],
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=RetryPolicy(maximum_attempts=3),
-                )
+                if not self.is_paused:
+                    status, sleep_state = get_workflow_state_for_update(
+                        is_paused=self.is_paused,
+                        manual_termination_requested=self.manual_termination_requested,
+                        default_sleep_state="sleeping",
+                    )
+                    next_wake_at = workflow.now() + sleep_duration
+                    await workflow.execute_activity(
+                        update_run_state,
+                        args=[
+                            self.run_id,
+                            status,
+                            self.memory_summary,
+                            sleep_state,
+                            next_wake_at.isoformat(),
+                        ],
+                        start_to_close_timeout=timedelta(seconds=10),
+                        retry_policy=RetryPolicy(maximum_attempts=3),
+                    )
 
             self.iteration_count += 1
             if self.iteration_count >= CONTINUE_AS_NEW_EVERY and not self.manual_termination_requested:

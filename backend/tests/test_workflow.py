@@ -10,7 +10,7 @@ from activities.agent import run_classifier
 from agent.errors import LLMModelNotFoundError
 from agent.provider import get_llm_provider
 from schemas.workflow import WorkflowInput, AgentOutput, AgentWakeUpDecision, EventSignal
-from temporal.workflow import OrderSupervisorWorkflow
+from temporal.workflow import OrderSupervisorWorkflow, get_workflow_state_for_update
 
 
 # Mock Activities
@@ -112,6 +112,13 @@ def test_provider_uses_repo_dotenv_model(monkeypatch):
     provider = get_llm_provider()
 
     assert provider.model_name == "gemma4:latest"
+
+
+def test_paused_workflow_keeps_paused_state():
+    status, sleep_state = get_workflow_state_for_update(is_paused=True, manual_termination_requested=False, default_sleep_state="sleeping")
+
+    assert status == "paused"
+    assert sleep_state == "paused"
 
 
 @pytest.mark.asyncio
